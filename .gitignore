@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.openai/
+*.log
+ratings-*.json
+condition_map.json
