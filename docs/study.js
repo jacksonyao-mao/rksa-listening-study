@@ -7,8 +7,9 @@ const metrics=[
 const data=window.LISTENING;
 const trials=new Map(data.trials.map(t=>[t.id,t]));
 const $=id=>document.getElementById(id);
-const storeKey="rksa-online:"+data.version;
-const endpoint="https://rksa-meanvc2-listening-responses.jacksonmaomao.chatgpt.site/api/submit";
+const preview=new URLSearchParams(location.search).get("preview")==="1";
+const storeKey="rksa-online:"+data.version+(preview?"/preview":"");
+const endpoint="https://rksa-meanvc2-listening-responses.jacksonmaomao.chatgpt.site/api/submit"+(preview?"?qa=1":"");
 let state, participant, busy=false, persistent=true;
 try { state=JSON.parse(localStorage.getItem(storeKey)); } catch {}
 if (!state || !/^[a-f0-9]{64}$/.test(state.secret) || !Array.isArray(state.order) ||
@@ -21,10 +22,12 @@ if (!state || !/^[a-f0-9]{64}$/.test(state.secret) || !Array.isArray(state.order
 }
 function save(){
   try { localStorage.setItem(storeKey,JSON.stringify(state)); } catch {persistent=false;}
+  $("save-status").textContent=persistent ? "Progress saved in this browser" : "Keep this tab open to retain your answers";
 }
 function show(page){for(const id of ["intro","trial","done"]) $(id).hidden=id!==page;}
 function stopAudio(){for(const el of document.querySelectorAll("audio")) el.pause();}
 function update(){
+  stopAudio();
   if(state.finished){
     show("done");$("counter").textContent=trials.size+" / "+trials.size;
     $("submission").textContent=state.receipt ? "Ratings received. Confirmation "+state.receipt+"." : "Your answers are complete and ready to submit.";
@@ -33,7 +36,7 @@ function update(){
   if(!state.started){show("intro");return;}
   show("trial");
   const id=state.order[state.index],trial=trials.get(id);
-  $("counter").textContent=(state.index+1)+" / "+trials.size;
+  $("counter").textContent="Question "+(state.index+1)+" of "+trials.size;
   $("progress").max=trials.size;$("progress").value=state.index+1;
   $("reference").src=trial.reference;$("test").src=trial.test;$("form").reset();
   for(const [name,value] of Object.entries(state.answers[id]||{})){
@@ -68,11 +71,12 @@ async function init(){
   save();
   const digest=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(state.secret)));
   participant="RK-"+Array.from(digest.slice(0,10),b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
-  $("identity").textContent="Participant "+participant+(persistent?"":" · Browser storage is unavailable. Keep this tab open.");
-  $("size").textContent=trials.size+" questions. Rate each item from 1 to 5.";
+  $("identity").textContent=(preview?"Preview · ":"")+"Participant "+participant+(persistent?"":" · Browser storage is unavailable. Keep this tab open.");
+  $("size").textContent=trials.size+" pairs · 3 ratings per pair";
+  $("counter").textContent=trials.size+" questions";
   for(const [name,title,question,options] of metrics){
     const field=document.createElement("fieldset");
-    field.innerHTML="<legend>"+title+"</legend><p>"+question+"</p><div class='scale'>"+options.map((v,i)=>'<label><input required type="radio" name="'+name+'" value="'+(i+1)+'"><b>'+(i+1)+'</b>'+v+'</label>').join("")+"</div>";
+    field.innerHTML="<legend>"+title+"</legend><p>"+question+"</p><div class='scale'>"+options.map((v,i)=>'<label><input required type="radio" name="'+name+'" value="'+(i+1)+'"><b>'+(i+1)+'</b><span>'+v+'</span></label>').join("")+"</div>";
     $("ratings").append(field);
   }
   $("start").onclick=()=>{state.started=true;save();update();};

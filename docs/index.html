@@ -1,16 +1,116 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Speech listening study · MeanVC2</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#f2f6f6;color:#24383f;font:16px/1.55 "Segoe UI",Arial,sans-serif}main{max-width:920px;margin:auto;padding:26px 18px 50px}header{display:flex;align-items:baseline;gap:16px;justify-content:space-between}h1{font-size:26px}h2,legend{font-size:18px;font-weight:650}p{margin:6px 0 14px}section,.card,fieldset{background:white;border:1px solid #cbdbdc;border-radius:12px;padding:18px;margin:12px 0}fieldset{min-width:0}.clips{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{margin:6px 0}.card h2{margin:0}.card p{color:#48616a;font-size:14px}audio{width:100%}.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.scale label{display:grid;justify-items:center;text-align:center;border:1px solid #d0dbdf;border-radius:7px;padding:8px 3px;font-size:13px;cursor:pointer}.scale label:has(:checked){background:#e1f4ed;border-color:#247869}input{accent-color:#236c60}button{color:white;background:#175f58;border:0;border-radius:6px;padding:10px 18px;font-size:15px;cursor:pointer}button:disabled{opacity:.5}nav{display:flex;align-items:center;justify-content:space-between;margin-top:16px}small{color:#4b666d}progress{width:100%;accent-color:#246d62}#notice{color:#a33c1b}a{color:#16665c}@media(max-width:620px){.clips{grid-template-columns:1fr}.card{padding:12px}.scale label{font-size:12px}fieldset{padding:12px}header{gap:6px}h1{font-size:21px}}
-[hidden]{display:none!important}#identity{font-size:14px;color:#48616a}button:focus-visible,a:focus-visible{outline:3px solid #227d70;outline-offset:3px}#done button{margin:4px 8px 4px 0}#intro{max-width:760px}#intro button{margin-top:6px}</style></head><body><main>
-<header><h1>Speech listening study</h1><b id="counter"></b></header>
-<p id="identity" aria-live="polite"></p><section id="intro"><p>For each question, listen to the reference clip first and then the test clip. The reference is the original recording of the same sentence. Judge speaker similarity by the sound of the voice.</p>
-<p>Compare the voices to rate speaker similarity. For naturalness and intelligibility, rate what you hear in the test clip itself. You can replay either clip.</p>
-<p>Your study ID is assigned automatically. Keep using this browser to resume. Finishing sends your ID and ratings privately to the study organizer.</p><p id="size"></p><button id="start">Start</button></section>
-<div id="trial" hidden><progress id="progress"></progress><div class="clips">
-<div class="card"><h2>Reference clip</h2><p>Listen to this voice for comparison.</p><audio id="reference" controls preload="metadata"></audio></div>
-<div class="card"><h2>Test clip</h2><p>Rate this recording.</p><audio id="test" controls preload="metadata"></audio></div></div>
-<form id="form"><div id="ratings"></div><p id="notice" role="status"></p><nav><button type="button" id="prev">Back</button><button id="next">Next</button></nav></form></div>
-<section id="done" hidden><h2>Test complete</h2><p id="submission" role="status"></p><button id="retry" hidden>Retry submission</button><button id="download">Download a copy</button><button id="review">Review answers</button></section>
-</main><script src="trials.js"></script><script src="core.js"></script><script src="study.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#174f46">
+  <meta name="description" content="Listen to pairs of recordings and rate speaker similarity, naturalness and intelligibility.">
+  <title>Speech listening study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Speech listening study home">
+        <span class="sound-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span>Speech listening study</span>
+      </a>
+      <span id="counter" class="counter" aria-live="polite">20 questions</span>
+    </header>
+    <main>
+      <section id="intro" class="intro">
+        <div class="intro-heading">
+          <p class="eyebrow">A study of speech perception</p>
+          <h1>How does this<br>voice sound?</h1>
+          <p class="lead">Listen to a pair of recordings.<br>Tell us how the voices compare.</p>
+          <p id="size" class="study-size"></p>
+          <button id="start" class="primary start">Start listening <span aria-hidden="true">→</span></button>
+          <p class="headphones">Use headphones in a quiet place.</p>
+        </div>
+        <div class="guide">
+          <h2>Before you begin</h2>
+          <div class="guide-item">
+            <h3>Listen to both recordings</h3>
+            <p>Play the reference, then the test clip. The reference is the original recording of the same sentence. Replay either as often as you like.</p>
+          </div>
+          <div class="guide-item">
+            <h3>Compare the voices</h3>
+            <p>Rate how similar the speaker in the test clip sounds to the speaker in the reference.</p>
+          </div>
+          <div class="guide-item">
+            <h3>Rate the test clip</h3>
+            <p>Judge its naturalness and how much you can understand from the test clip itself.</p>
+          </div>
+          <p class="resume-note">Your progress saves as you go. Return in this browser to continue.</p>
+        </div>
+      </section>
+      <section id="trial" hidden>
+        <div class="trial-heading">
+          <div><p class="eyebrow">Listen and compare</p><h1>Two recordings. Your impression.</h1></div>
+          <p>Replay either clip whenever you need.</p>
+        </div>
+        <progress id="progress" aria-label="Study progress"></progress>
+        <div class="clips">
+          <article class="audio-card">
+            <div class="clip-heading"><h2>Reference recording</h2><span class="clip-tag">Original</span></div>
+            <p>Use this voice for comparison.</p>
+            <audio id="reference" preload="metadata"></audio>
+            <div class="player">
+              <button type="button" class="play-button" data-audio="reference" aria-label="Play reference recording"><span class="play-symbol" aria-hidden="true"></span></button>
+              <div class="timeline">
+                <input class="seek" data-seek="reference" type="range" min="0" max="1" step="0.01" value="0" aria-label="Reference recording position" disabled>
+                <div class="time"><span data-current="reference">0:00</span><span data-duration="reference">—</span></div>
+              </div>
+            </div>
+            <p class="audio-status" data-status="reference" role="status"></p>
+          </article>
+          <article class="audio-card">
+            <div class="clip-heading"><h2>Test recording</h2><span class="clip-tag">Rate this clip</span></div>
+            <p>Listen to the voice and the speech.</p>
+            <audio id="test" preload="metadata"></audio>
+            <div class="player">
+              <button type="button" class="play-button" data-audio="test" aria-label="Play test recording"><span class="play-symbol" aria-hidden="true"></span></button>
+              <div class="timeline">
+                <input class="seek" data-seek="test" type="range" min="0" max="1" step="0.01" value="0" aria-label="Test recording position" disabled>
+                <div class="time"><span data-current="test">0:00</span><span data-duration="test">—</span></div>
+              </div>
+            </div>
+            <p class="audio-status" data-status="test" role="status"></p>
+          </article>
+        </div>
+        <form id="form">
+          <div id="ratings"></div>
+          <p id="notice" role="status"></p>
+          <nav class="trial-navigation" aria-label="Question navigation">
+            <button type="button" id="prev" class="secondary">Back</button>
+            <span id="save-status" class="save-status" role="status">Select one answer in each row</span>
+            <button id="next" class="primary">Next</button>
+          </nav>
+        </form>
+      </section>
+      <section id="done" class="done" hidden>
+        <div class="completion-mark" aria-hidden="true">✓</div>
+        <p class="eyebrow">All questions answered</p>
+        <h1>Thank you for listening.</h1>
+        <p id="submission" role="status"></p>
+        <div class="completion-actions">
+          <button id="retry" class="primary" hidden>Retry submission</button>
+          <button id="download" class="secondary">Download your ratings</button>
+          <button id="review" class="secondary">Review answers</button>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <p id="identity" aria-live="polite"></p>
+      <p>Your study ID is assigned automatically. Finishing sends your ID and ratings privately to the organizer.</p>
+    </footer>
+  </div>
+  <script src="trials.js"></script>
+  <script src="core.js"></script>
+  <script src="player.js"></script>
+  <script src="study.js"></script>
+</body>
+</html>

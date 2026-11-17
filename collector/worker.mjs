@@ -2,7 +2,7 @@ import study from "./trials.json" with { type: "json" };
 
 const origins = new Set(["https://jacksonyao-mao.github.io"]);
 const metrics = ["similarity", "naturalness", "intelligibility"];
-const alphabet = new Set(study.ids);
+const studies = new Map([study, ...study.previous].map(s => [s.version, new Set(s.ids)]));
 const encoder = new TextEncoder();
 
 async function participantID(secret) {
@@ -11,7 +11,8 @@ async function participantID(secret) {
 }
 
 function ratings(body) {
-  if (body?.version !== study.version || !/^[a-f0-9]{64}$/.test(body?.secret ?? "")) return;
+  const alphabet = studies.get(body?.version);
+  if (!alphabet || !/^[a-f0-9]{64}$/.test(body?.secret ?? "")) return;
   if (!Array.isArray(body.order) || body.order.length !== alphabet.size ||
       new Set(body.order).size !== alphabet.size || !body.order.every(id => alphabet.has(id))) return;
   if (!body.answers || Object.keys(body.answers).length !== alphabet.size) return;
@@ -43,9 +44,11 @@ export default {async fetch(request, env) {
       const digest = Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
       if (digest !== "5904a5006e1a6d790c065015eda50a6e40df6cc6e9f097fe99acd814b7f40d77") return reply(403,{error:"Access denied."});
       const after=url.searchParams.get("after")||"";
+      const version=url.searchParams.get("version")||study.version;
+      if (!studies.has(version)) return reply(400,{error:"Unknown study version."});
       const rows=await env.DB.prepare("SELECT participant,submitted,receipt,ratings FROM submissions WHERE study=? AND participant>? ORDER BY participant LIMIT 50")
-        .bind(study.version,after).all();
-      return reply(200,{version:study.version,responses:rows.results.map(r=>({...r,ratings:JSON.parse(r.ratings)})),
+        .bind(version,after).all();
+      return reply(200,{version,responses:rows.results.map(r=>({...r,ratings:JSON.parse(r.ratings)})),
         next:rows.results.length===50?rows.results.at(-1).participant:null});
     }
     if (url.pathname !== "/api/submit") return reply(404, {error:"Unknown route."});
@@ -56,16 +59,16 @@ export default {async fetch(request, env) {
     let body;
     try {body=JSON.parse(text);} catch {return reply(400,{error:"Invalid JSON."});}
     const payload = ratings(body);
-    if (!payload) return reply(422,{error:"All 40 trials need three ratings from 1 to 5."});
+    if (!payload) return reply(422,{error:"Each trial needs three ratings from 1 to 5 for the selected study version."});
     const id = await participantID(body.secret);
-    const version = url.searchParams.get("qa")==="1" ? study.version+"/qa" : study.version;
+    const version = url.searchParams.get("qa")==="1" ? body.version+"/qa" : body.version;
     await env.DB.prepare("INSERT INTO submissions (study,participant,receipt,submitted,ratings) VALUES (?,?,?,?,?) ON CONFLICT(study,participant) DO NOTHING")
       .bind(version,id,crypto.randomUUID(),new Date().toISOString(),payload).run();
     const row = await env.DB.prepare("SELECT receipt,ratings FROM submissions WHERE study=? AND participant=?")
       .bind(version,id).first();
     if (!row) return reply(503,{error:"Please retry your submission."});
     if (row.ratings !== payload) return reply(409,{error:"A different completed response is already saved for this participant."});
-    return reply(200,{participant:id,receipt:row.receipt,version:study.version});
+    return reply(200,{participant:id,receipt:row.receipt,version:body.version});
   } catch {
     return reply(503,{error:"Storage is temporarily unavailable. Your answers can be submitted again."});
   }
