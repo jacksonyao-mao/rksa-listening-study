@@ -1,4 +1,5 @@
 "use strict";
+const similarityGuidance="If the voices sound like different genders, select <strong>1</strong>. If they sound like the same gender but are only slightly or moderately similar, select <strong>2–3</strong>. If the voices sound very similar, select <strong>4–5</strong>.";
 const metrics=[
  ["similarity","Speaker similarity","How similar is the voice in the test clip to the voice in the reference clip?",["Not at all similar","Slightly similar","Moderately similar","Very similar","Extremely similar"]],
  ["naturalness","Naturalness","How natural does the speech in the test clip sound?",["Very unnatural","Somewhat unnatural","Neither natural nor unnatural","Somewhat natural","Very natural"]],
@@ -77,6 +78,12 @@ async function init(){
   for(const [name,title,question,options] of metrics){
     const field=document.createElement("fieldset");
     field.innerHTML="<legend>"+title+"</legend><p>"+question+"</p><div class='scale'>"+options.map((v,i)=>'<label><input required type="radio" name="'+name+'" value="'+(i+1)+'"><b>'+(i+1)+'</b><span>'+v+'</span></label>').join("")+"</div>";
+    if(name==="similarity"){
+      const guide=document.createElement("p");
+      guide.className="rating-guidance";
+      guide.innerHTML=similarityGuidance;
+      field.querySelector(".scale").before(guide);
+    }
     $("ratings").append(field);
   }
   $("start").onclick=()=>{state.started=true;save();update();};
