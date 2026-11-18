@@ -8,6 +8,8 @@ The first visit creates a random study ID. The browser remembers the ID, the ran
 
 **Finish and submit** sends the completed ratings to the study collector. A receipt confirms storage. If the request is interrupted, the listener can retry or download a backup. Repeated delivery of the same response returns the existing receipt. The original listen-through and the same-sentence study have separate version identifiers.
 
+The introduction checks whether the response server is reachable. Submission retries temporary connection and server failures up to three times with the same response. A green confirmation appears only after a matching receipt; otherwise the page shows an error code and offers a ratings-file backup. Saved browser answers remain available for a later retry. If a listener cannot reach the response server, they can send that backup to the organizer for manual recovery.
+
 ## Repository
 
 - `docs/` contains the GitHub Pages site. The active manifest uses 20 original references and 40 test recordings, with randomized order and hidden trial conditions. Earlier audio assets support existing sessions. Publish from `main` → `/docs`.

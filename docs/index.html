@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;650;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=similarity-guidance-1">
+  <link rel="stylesheet" href="styles.css?v=submission-recovery-1">
 </head>
 <body>
   <div class="page">
@@ -29,6 +29,7 @@
           <p id="size" class="study-size"></p>
           <button id="start" class="primary start">Start listening <span aria-hidden="true">→</span></button>
           <p class="headphones">Use headphones in a quiet place.</p>
+          <p id="connection" class="connection-note" role="status">Checking the connection to the response server…</p>
         </div>
         <div class="guide">
           <h2>Before you begin</h2>
@@ -93,10 +94,11 @@
         </form>
       </section>
       <section id="done" class="done" hidden>
-        <div class="completion-mark" aria-hidden="true">✓</div>
-        <p class="eyebrow">All questions answered</p>
-        <h1>Thank you for listening.</h1>
+        <div id="completion-mark" class="completion-mark" aria-hidden="true">!</div>
+        <p id="completion-label" class="eyebrow">Submission not confirmed</p>
+        <h1 id="completion-title">Your ratings still need to be sent.</h1>
         <p id="submission" role="status"></p>
+        <p id="backup-note" class="backup-note"></p>
         <div class="completion-actions">
           <button id="retry" class="primary" hidden>Retry submission</button>
           <button id="download" class="secondary">Download your ratings</button>
@@ -112,6 +114,7 @@
   <script src="trials.js?v=meanvc2-reextracted-40-b76cb5897e65-en"></script>
   <script src="core.js?v=meanvc2-reextracted-40-b76cb5897e65-en"></script>
   <script src="player.js?v=meanvc2-reextracted-40-b76cb5897e65-en"></script>
-  <script src="study.js?v=similarity-guidance-1"></script>
+  <script src="submission.js?v=submission-recovery-1"></script>
+  <script src="study.js?v=submission-recovery-1"></script>
 </body>
 </html>

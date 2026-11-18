@@ -11,7 +11,7 @@ const $=id=>document.getElementById(id);
 const preview=new URLSearchParams(location.search).get("preview")==="1";
 const storeKey="rksa-online:"+data.version+(preview?"/preview":"");
 const endpoint="https://rksa-meanvc2-listening-responses.jacksonmaomao.chatgpt.site/api/submit"+(preview?"?qa=1":"");
-let state, participant, busy=false, persistent=true;
+let state, participant, busy=false, persistent=true, submissionError=null, lastAttempt=0;
 try { state=JSON.parse(localStorage.getItem(storeKey)); } catch {}
 if (!state || !/^[a-f0-9]{64}$/.test(state.secret) || !Array.isArray(state.order) ||
     state.order.length!==trials.size || new Set(state.order).size!==trials.size ||
@@ -31,8 +31,15 @@ function update(){
   stopAudio();
   if(state.finished){
     show("done");$("counter").textContent=trials.size+" / "+trials.size;
-    $("submission").textContent=state.receipt ? "Ratings received. Confirmation "+state.receipt+"." : "Your answers are complete and ready to submit.";
-    $("retry").hidden=Boolean(state.receipt);$("review").hidden=Boolean(state.receipt)||busy;return;
+    const received=Boolean(state.receipt);
+    $("done").dataset.status=received?"received":busy?"sending":"pending";
+    $("completion-mark").textContent=received?"✓":busy?"…":"!";
+    $("completion-label").textContent=received?"Submission confirmed":busy?"Sending your answers":"Submission not confirmed";
+    $("completion-title").textContent=received?"Thank you for listening.":busy?"Saving your ratings…":"Your ratings still need to be sent.";
+    $("submission").textContent=received ? "Ratings received. Confirmation "+state.receipt+"." : submissionError || "You have answered all questions. Download a backup while we send your ratings.";
+    $("backup-note").hidden=received;
+    $("backup-note").textContent=persistent?"Your answers are saved in this browser. Keep this browser's data until you receive a confirmation. You can send the downloaded ratings file to the organizer if submission keeps failing.":"Browser storage is unavailable. Download your ratings now and keep this tab open until you receive a confirmation.";
+    $("retry").hidden=received;$("retry").disabled=busy;$("review").hidden=received||busy;return;
   }
   if(!state.started){show("intro");return;}
   show("trial");
@@ -47,26 +54,36 @@ function update(){
   $("next").textContent=state.index===trials.size-1?"Finish and submit":"Next";
 }
 function backup(){
-  const copy={version:data.version,participant,order:state.order,answers:state.answers,finished:state.finished,receipt:state.receipt||null};
+  const copy={version:data.version,participant,order:state.order,answers:state.answers,finished:state.finished,receipt:state.receipt||null,submission_error:submissionError,exported_at:new Date().toISOString()};
   const url=URL.createObjectURL(new Blob([JSON.stringify(copy,null,2)],{type:"application/json"}));
   const a=document.createElement("a");a.href=url;a.download="ratings-"+data.version+"-"+participant+".json";a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function submit(){
   if(busy||state.receipt)return;
-  busy=true;$("retry").disabled=true;$("review").hidden=true;$("submission").textContent="Sending your ratings…";
+  busy=true;submissionError=null;lastAttempt=Date.now();update();
   try{
-    const response=await fetch(endpoint,{method:"POST",credentials:"omit",
-      headers:{"Content-Type":"text/plain;charset=UTF-8"},signal:AbortSignal.timeout(25000),
-      body:JSON.stringify({version:data.version,secret:state.secret,order:state.order,answers:state.answers})});
-    if(!response.ok)throw Error("submission");
-    const result=await response.json();
-    if(result.version!==data.version||result.participant!==participant||!result.receipt)throw Error("confirmation");
-    state.receipt=result.receipt;save();update();
+    const result=await StudySubmission.send(endpoint,
+      {version:data.version,secret:state.secret,order:state.order,answers:state.answers},
+      {version:data.version,participant},
+      (attempt,total)=>{$("submission").textContent="Sending your ratings (attempt "+attempt+" of "+total+")… You can download a backup below.";});
+    state.receipt=result.receipt;save();
+  }catch(error){
+    submissionError=(error.message||"Submission could not be confirmed. Download your ratings and retry.")+" ("+(error.code||"UNKNOWN")+")";
+  }finally{busy=false;update();}
+}
+async function checkConnection(){
+  $("connection").dataset.status="checking";
+  $("connection").textContent="Checking the connection to the response server…";
+  try{
+    const result=await StudySubmission.requestJSON(endpoint.split("/api/")[0]+"/health",{},10000);
+    if(result.ready!==true)throw Error("not ready");
+    $("connection").dataset.status="ready";
+    $("connection").textContent="Response server reachable. Your ratings will be submitted when you finish.";
   }catch{
-    $("submission").textContent="Submission has not been confirmed. Retry when connected, or download a copy of your ratings.";
-    $("retry").hidden=false;$("review").hidden=false;
-  }finally{busy=false;$("retry").disabled=false;}
+    $("connection").dataset.status="unavailable";
+    $("connection").textContent="The response server could not be reached from this browser. If you continue, download your ratings at the end and send the file to the organizer if submission fails. You can also try another connection before starting.";
+  }
 }
 async function init(){
   save();
@@ -100,6 +117,7 @@ async function init(){
   $("retry").onclick=submit;$("download").onclick=backup;
   $("review").onclick=()=>{if(!busy&&!state.receipt){state.finished=false;state.index=0;save();update();}};
   document.addEventListener("play",e=>{if(e.target instanceof HTMLAudioElement){for(const a of document.querySelectorAll("audio"))if(a!==e.target)a.pause();}},true);
-  update();if(state.finished&&!state.receipt)submit();
+  window.addEventListener("online",()=>{checkConnection();if(state.finished&&!state.receipt&&Date.now()-lastAttempt>30000)submit();});
+  update();checkConnection();if(state.finished&&!state.receipt)submit();
 }
 init().catch(()=>{$("identity").textContent="Please open this study in a browser with HTTPS and audio playback enabled.";});

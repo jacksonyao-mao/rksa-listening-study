@@ -84,6 +84,11 @@ fieldset > .rating-guidance { margin-top: 0; line-height: 1.65; }
 #notice:not(:empty) { margin: 12px 0; }
 .done { text-align: center; padding: 80px 20px 100px; }
 .completion-mark { display: grid; place-items: center; margin: 0 auto 24px; background: #e3ecde; color: var(--green); border-radius: 50%; width: 64px; height: 64px; font-size: 30px; }
+.done[data-status="pending"] .completion-mark { background: #f7ead2; color: #845b15; }
+.done[data-status="sending"] .completion-mark { background: #e9ece8; color: var(--muted); }
+.backup-note { color: var(--muted); max-width: 580px; margin: 18px auto 0; font-size: 14px; line-height: 1.65; }
+.connection-note { max-width: 420px; margin-top: 18px; font-size: 13px; color: var(--muted); line-height: 1.65; }
+.connection-note[data-status="unavailable"] { color: #845b15; background: #f7ead2; padding: 12px; border-radius: 8px; }
 .done h1 { font-size: 38px; font-weight: 500; letter-spacing: -.035em; margin-bottom: 18px; }
 #submission { color: var(--muted); max-width: 540px; margin: auto; overflow-wrap: anywhere; }
 .completion-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 30px; }
